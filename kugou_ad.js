@@ -1,34 +1,33 @@
-
 var body = $response.body;
 
 try {
     var obj = JSON.parse(body);
 
-    // 清空所有广告位数据
-    if (obj.rpt_msg_pos_ad_info && Array.isArray(obj.rpt_msg_pos_ad_info)) {
-        obj.rpt_msg_pos_ad_info = [];
+    // 清空 data 中每个广告位的广告列表
+    if (obj.data && typeof obj.data === 'object') {
+        for (var posid in obj.data) {
+            if (obj.data.hasOwnProperty(posid)) {
+                var pos = obj.data[posid];
+                if (pos && pos.list && Array.isArray(pos.list)) {
+                    // 仅保留 is_empty:1 的占位广告（如果存在），其余全部移除
+                    pos.list = pos.list.filter(function(ad) {
+                        return ad.is_empty === 1;
+                    });
+                    // 如果没有占位广告，直接设为空数组
+                    if (!pos.list.length) pos.list = [];
+                }
+            }
+        }
     }
 
-    // 禁用开屏广告
-    if (obj.hasOwnProperty('need_show_ams_splash')) {
-        obj.need_show_ams_splash = 0;
-    }
-    if (obj.hasOwnProperty('tme_splash_times')) {
-        obj.tme_splash_times = 0;
-    }
-    if (obj.hasOwnProperty('splash_rotation_num')) {
-        obj.splash_rotation_num = 0;
-    }
-
-    // 如果有其他相关字段也可一并处理
-    if (obj.hasOwnProperty('need_splash_rotation')) {
-        obj.need_splash_rotation = 0;
+    // 清除可能的上一次广告数据
+    if (obj.last_ads) {
+        obj.last_ads = {};
     }
 
     body = JSON.stringify(obj);
 } catch (e) {
-    // 解析失败则原样返回
-    console.log('kugou_ad.js error: ' + e.message);
+    console.log('kugou_gdt_ad.js error: ' + e.message);
 }
 
 $done({ body });
